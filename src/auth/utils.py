@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from config import settings
 from .models import User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -17,8 +18,9 @@ def get_password_hash(password: str):
 def verify_password(raw_password: str, hashed_password: str):
     return pwd_context.verify(raw_password, hashed_password)
 
-def authenticate_user(db: Session, username: str, password: str):
-    user = db.query(User).filter(User.username == username).first()
+async def authenticate_user(db: AsyncSession, username: str, password: str):
+    result = await db.execute(User.__table__.select().where(User.username == username))
+    user = result.scalar_one_or_none()
     if user is None:
         return False
     if not verify_password(password, user.password):

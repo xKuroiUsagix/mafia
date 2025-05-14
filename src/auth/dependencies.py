@@ -7,9 +7,10 @@ from config import settings
 from .schemas import TokenData
 from .utils import oauth2_scheme
 from .models import User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',
@@ -25,7 +26,10 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     except InvalidTokenError:
         raise credentials_exception
     
-    user = db.query(User).filter(User.username == token_data.username).first()
+    result = await db.execute(
+        User.__table__.select().where(User.username == token_data.username)
+    )
+    user = result.scalar_one_or_none()
 
     if user is None:
         raise credentials_exception
