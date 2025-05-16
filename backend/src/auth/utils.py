@@ -1,15 +1,15 @@
 import jwt
 from datetime import timedelta, datetime, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from config import settings
 from .models import User
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token/obtain')
 
 
 def get_password_hash(password: str):
@@ -19,7 +19,7 @@ def verify_password(raw_password: str, hashed_password: str):
     return pwd_context.verify(raw_password, hashed_password)
 
 async def authenticate_user(db: AsyncSession, username: str, password: str):
-    result = await db.execute(User.__table__.select().where(User.username == username))
+    result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
     if user is None:
         return False
@@ -27,7 +27,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
         return False
     return user
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
