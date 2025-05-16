@@ -20,7 +20,7 @@ class TokenData(BaseModel):
     username: str | None = None
 
 class TokenPair(TokenBase):
-    refresh_token: str
+    refresh_token: str | None
 
 class TokenRequest(BaseModel):
     token: str

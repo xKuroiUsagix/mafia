@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     ACCES_TOKEN_EXPIRES_MINUTES: int
     REFRESH_TOKEN_EXPIRES_HOURS: int
     ALGORITHM: str
-    DEBUG: int = 1
+    DEBUG: bool = True
 
 class ProductionSettings(Settings):
     pass

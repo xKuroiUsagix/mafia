@@ -1,7 +1,7 @@
 import jwt
 from datetime import timedelta
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -18,6 +18,7 @@ router = APIRouter(prefix='/token')
 
 @router.post('/obtain')
 async def login_for_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(), 
     db: AsyncSession = Depends(get_db)
 ) -> TokenPair:
@@ -37,17 +38,35 @@ async def login_for_access_token(
         expires_delta=refresh_token_expires
     )
 
+    response.set_cookie(
+        key='refresh_token',
+        value=refresh_token,
+        httponly=True,
+        secure=settings.DEBUG == 0,
+        samesite='lax',
+        max_age=settings.REFRESH_TOKEN_EXPIRES_HOURS*60*60
+    )
+
     return TokenPair(
         access_token=access_token,
-        refresh_token=refresh_token,
+        refresh_token=refresh_token if settings.DEBUG else None,
         token_type='bearer'
     )
 
 @router.post('/refresh')
 async def refresh_token(
-    token_data: TokenRequest, 
+    request: Request,
+    token_data: TokenRequest = None, 
     db: AsyncSession = Depends(get_db)
 ) -> TokenBase:
+    if settings.DEBUG and token_data:
+        refresh_token = token_data.refresh_token
+    else:
+        refresh_token = request.cookies.get('refresh_token')
+
+    if not refresh_token:
+        raise AuthenticationError('Refresh token is missing.')
+
     try:
         payload = jwt.decode(
             token_data.token, 
