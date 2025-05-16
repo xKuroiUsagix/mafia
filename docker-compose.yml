@@ -1,0 +1,49 @@
+services:
+  backend:
+    image: backend:latest
+    container_name: mafia_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - livekit
+    env_file:
+    - .env.backend
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+
+  # frontend:
+  #   image: frontend:latest
+  #   container_name: mafia_frontend
+  #   ports:
+  #     - "8080:80"
+  #   depends_on:
+  #     - backend
+  postgres:
+      image: postgres:16
+      container_name: mafia_postgres
+      restart: always
+      env_file:
+        - .env.backend
+      ports:
+        - "5432:5432"
+      # volumes:
+      #   - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: mafia_redis
+    ports:
+      - "6379:6379"
+
+  livekit:
+    image: livekit/livekit-server:v1.8
+    container_name: mafia_livekit
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "5349:5349/udp"
+    environment:
+      - LIVEKIT_CONFIG_FILE=/etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
